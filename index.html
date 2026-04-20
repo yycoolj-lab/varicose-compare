@@ -470,6 +470,7 @@
         document.addEventListener('touchend', function() { dragState = null; });
 
         function handleDrag(clientX, clientY) {
+            const dx = clientX - dragState.startX;
             const dy = clientY - dragState.startY;
             dragState.startX = clientX;
             dragState.startY = clientY;
@@ -479,16 +480,25 @@
             const img = type === 'before' ? beforeImage : afterImage;
             const canvas = document.getElementById(type + 'Preview');
             const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
 
             const baseRatio = Math.max(canvas.width / img.width, canvas.height / img.height);
+            const drawW = img.width * baseRatio * state.zoom;
             const drawH = img.height * baseRatio * state.zoom;
 
-            // 只允許上下移動，水平永遠置中
+            // 上下移動
             state.centerY -= (dy * scaleY) / drawH;
             const minCY = Math.min(0.5, canvas.height / (2 * drawH));
             const maxCY = Math.max(0.5, 1 - canvas.height / (2 * drawH));
             state.centerY = Math.max(minCY, Math.min(maxCY, state.centerY));
+
+            // 左右移動（將病灶位置置中）
+            state.centerX -= (dx * scaleX) / drawW;
+            const minCX = Math.min(0.5, canvas.width / (2 * drawW));
+            const maxCX = Math.max(0.5, 1 - canvas.width / (2 * drawW));
+            state.centerX = Math.max(minCX, Math.min(maxCX, state.centerX));
+
             renderPreview(type);
         }
         
