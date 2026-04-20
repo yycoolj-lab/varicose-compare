@@ -311,6 +311,14 @@
                 <label>自訂時間</label>
                 <input type="text" id="customTime" placeholder="例如：四個月">
             </div>
+            <div class="option-row">
+                <label>圖片比例</label>
+                <select id="formatSelect">
+                    <option value="square" selected>1:1 正方形（IG 貼文）</option>
+                    <option value="portrait">4:5 直式（IG 貼文）</option>
+                    <option value="landscape">3:2 橫式（原始）</option>
+                </select>
+            </div>
         </div>
         
         <button class="btn" id="generateBtn" onclick="generateImage()" disabled>
@@ -319,7 +327,7 @@
         
         <div class="preview-section hidden" id="previewSection">
             <h3>預覽</h3>
-            <canvas id="previewCanvas" width="1050" height="700"></canvas>
+            <canvas id="previewCanvas" width="1080" height="1080"></canvas>
             <br><br>
             <button class="btn btn-download" onclick="downloadImage()">
                 ⬇️ 下載圖片
@@ -500,68 +508,81 @@
             const canvas = document.getElementById('previewCanvas');
             const ctx = canvas.getContext('2d');
 
-            // 設定畫布尺寸 (2K 解析度，顯示時用 CSS 縮放)
+            // 依使用者選擇決定畫布尺寸
+            const format = document.getElementById('formatSelect').value;
+            let W, H;
+            if (format === 'square') {
+                W = 1080; H = 1080;      // IG 正方形
+            } else if (format === 'portrait') {
+                W = 1080; H = 1350;      // IG 4:5 直式
+            } else {
+                W = 1050; H = 700;       // 原始橫式
+            }
+
+            // 設定畫布尺寸 (2x 解析度，顯示時用 CSS 縮放)
             const scale = 2;
-            canvas.width = 1050 * scale;
-            canvas.height = 700 * scale;
+            canvas.width = W * scale;
+            canvas.height = H * scale;
+            canvas.style.aspectRatio = W + ' / ' + H;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.scale(scale, scale);
 
             // 背景色 - 淺米色
             ctx.fillStyle = '#FAF9F6';
-            ctx.fillRect(0, 0, 1050, 700);
-            
+            ctx.fillRect(0, 0, W, H);
+
             // 深綠色外框
             const borderWidth = 4;
             const margin = 10;
             ctx.strokeStyle = '#1a5f4a';
             ctx.lineWidth = borderWidth;
-            ctx.strokeRect(margin, margin, 1050 - margin * 2, 700 - margin * 2);
-            
+            ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
+
             // 標題
             ctx.fillStyle = '#1a5f4a';
             ctx.font = 'bold 32px -apple-system, "Microsoft JhengHei", sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('靜脈曲張患者治療對比圖', 1050 / 2, 75);
-            
+            ctx.fillText('靜脈曲張患者治療對比圖', W / 2, 75);
+
             // Logo (右上角)
             if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
                 const logoHeight = 60;
                 const logoRatio = logoImage.naturalWidth / logoImage.naturalHeight;
                 const logoWidth = logoHeight * logoRatio;
-                ctx.drawImage(logoImage, 1050 - logoWidth - 25, 15, logoWidth, logoHeight);
+                ctx.drawImage(logoImage, W - logoWidth - 25, 15, logoWidth, logoHeight);
                 ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillStyle = '#1a5f4a';
-                ctx.fillText('富足診所', 1050 - logoWidth/2 - 25, 85);
+                ctx.fillText('富足診所', W - logoWidth/2 - 25, 85);
             } else {
                 // 如果 Logo 沒載入，用文字代替
                 ctx.font = 'bold 16px -apple-system, "Microsoft JhengHei", sans-serif';
                 ctx.textAlign = 'right';
                 ctx.fillStyle = '#1a5f4a';
-                ctx.fillText('富足診所', 1050 - 30, 50);
+                ctx.fillText('富足診所', W - 30, 50);
             }
-            
+
             // 照片區域計算
             const photoTop = 120;
-            const photoBottom = 700 - 30;
+            const photoBottom = H - 40;
             const photoHeight = photoBottom - photoTop - 30; // 留空間給標籤
-            const photoWidth = (1050 - 80) / 2; // 兩張照片
+            const photoWidth = (W - 80) / 2; // 兩張照片
             const gap = 20;
-            
+
             // 標籤 - 治療前
             ctx.font = 'bold 22px -apple-system, "Microsoft JhengHei", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#1a5f4a';
             ctx.fillText('圖一：治療前', 30 + photoWidth / 2, photoTop + 20);
-            
+
             // 標籤 - 治療後
             const timeText = getTimeText();
             ctx.fillText(`圖二：治療後 ${timeText}`, 30 + photoWidth + gap + photoWidth / 2, photoTop + 20);
-            
+
             // 繪製照片
             const imgTop = photoTop + 35;
             const imgHeight = photoHeight - 35;
-            
+
             // 治療前照片
             drawImageZoomed(ctx, beforeImage, 30, imgTop, photoWidth, imgHeight, imageState.before);
 
@@ -572,7 +593,7 @@
             ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#1a5f4a';
-            ctx.fillText('靜脈曲張微創處理專家', 1050 / 2, 665);
+            ctx.fillText('靜脈曲張微創處理專家', W / 2, H - 15);
 
             // 顯示預覽
             document.getElementById('previewSection').classList.remove('hidden');
