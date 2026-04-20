@@ -539,44 +539,51 @@
             ctx.lineWidth = borderWidth;
             ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
 
+            // 依畫布比例設定邊距（portrait 需要更大呼吸空間）
+            const isPortrait = (format !== 'landscape');
+            const titleY = isPortrait ? 100 : 75;
+            const titleFont = isPortrait ? 'bold 36px' : 'bold 32px';
+            const logoTopY = isPortrait ? 28 : 15;
+            const logoLabelOffset = isPortrait ? 78 : 70; // Logo 下方「富足診所」與 logoTopY 的距離
+            const bottomTextY = isPortrait ? H - 50 : H - 35;
+            const bottomFont = isPortrait ? 'bold 22px' : 'bold 20px';
+            const areaTop = isPortrait ? 140 : 120;
+            const areaBottom = isPortrait ? H - 95 : H - 30;
+
             // 標題
             ctx.fillStyle = '#1a5f4a';
-            ctx.font = 'bold 32px -apple-system, "Microsoft JhengHei", sans-serif';
+            ctx.font = titleFont + ' -apple-system, "Microsoft JhengHei", sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('靜脈曲張患者治療對比圖', W / 2, 75);
+            ctx.fillText('靜脈曲張患者治療對比圖', W / 2, titleY);
 
             // Logo (右上角)
             if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
                 const logoHeight = 60;
                 const logoRatio = logoImage.naturalWidth / logoImage.naturalHeight;
                 const logoWidth = logoHeight * logoRatio;
-                ctx.drawImage(logoImage, W - logoWidth - 25, 15, logoWidth, logoHeight);
+                ctx.drawImage(logoImage, W - logoWidth - 25, logoTopY, logoWidth, logoHeight);
                 ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillStyle = '#1a5f4a';
-                ctx.fillText('富足診所', W - logoWidth/2 - 25, 85);
+                ctx.fillText('富足診所', W - logoWidth/2 - 25, logoTopY + logoLabelOffset);
             } else {
                 // 如果 Logo 沒載入，用文字代替
                 ctx.font = 'bold 16px -apple-system, "Microsoft JhengHei", sans-serif';
                 ctx.textAlign = 'right';
                 ctx.fillStyle = '#1a5f4a';
-                ctx.fillText('富足診所', W - 30, 50);
+                ctx.fillText('富足診所', W - 30, logoTopY + 35);
             }
 
             // 照片區域計算
-            const areaTop = 120;
-            const areaBottom = H - 40;
             const areaH = areaBottom - areaTop;
             const colWidth = (W - 80) / 2;
             const gap = 20;
-            const labelH = 35;
+            const labelH = isPortrait ? 40 : 35;
 
-            // 依上傳照片的實際比例決定畫框高度（取較高的那張，避免留白）
-            const aspectB = beforeImage.height / beforeImage.width;
-            const aspectA = afterImage.height / afterImage.width;
-            const frameAspect = Math.max(aspectB, aspectA);
+            // 畫框尺寸：填滿可用空間，aspect 上限 1.8（避免過度裁切）
+            const frameAspectCap = 1.8;
             const frameW = colWidth;
-            const frameH = Math.min(areaH - labelH, frameW * frameAspect);
+            const frameH = Math.min(areaH - labelH, frameW * frameAspectCap);
 
             // 垂直置中整個區塊（標籤 + 畫框）
             const blockH = labelH + frameH;
@@ -601,10 +608,10 @@
             drawImageZoomed(ctx, afterImage, 30 + colWidth + gap, imgTop, frameW, frameH, imageState.after);
 
             // 底部文字
-            ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
+            ctx.font = bottomFont + ' -apple-system, "Microsoft JhengHei", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#1a5f4a';
-            ctx.fillText('靜脈曲張微創處理專家', W / 2, H - 15);
+            ctx.fillText('靜脈曲張微創處理專家', W / 2, bottomTextY);
 
             // 顯示預覽
             document.getElementById('previewSection').classList.remove('hidden');
