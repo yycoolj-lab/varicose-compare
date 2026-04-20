@@ -429,7 +429,8 @@
             const ctx = canvas.getContext('2d');
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const baseRatio = Math.min(canvas.width / img.width, canvas.height / img.height);
+            // cover 模式：與最終輸出一致（填滿裁切）
+            const baseRatio = Math.max(canvas.width / img.width, canvas.height / img.height);
             const drawW = img.width * baseRatio * state.zoom;
             const drawH = img.height * baseRatio * state.zoom;
             const drawX = canvas.width / 2 - state.centerX * drawW;
@@ -480,7 +481,7 @@
             const rect = canvas.getBoundingClientRect();
             const scaleY = canvas.height / rect.height;
 
-            const baseRatio = Math.min(canvas.width / img.width, canvas.height / img.height);
+            const baseRatio = Math.max(canvas.width / img.width, canvas.height / img.height);
             const drawH = img.height * baseRatio * state.zoom;
 
             // 只允許上下移動，水平永遠置中
@@ -563,31 +564,41 @@
             }
 
             // 照片區域計算
-            const photoTop = 120;
-            const photoBottom = H - 40;
-            const photoHeight = photoBottom - photoTop - 30; // 留空間給標籤
-            const photoWidth = (W - 80) / 2; // 兩張照片
+            const areaTop = 120;
+            const areaBottom = H - 40;
+            const areaH = areaBottom - areaTop;
+            const colWidth = (W - 80) / 2;
             const gap = 20;
+            const labelH = 35;
+
+            // 依上傳照片的實際比例決定畫框高度（取較高的那張，避免留白）
+            const aspectB = beforeImage.height / beforeImage.width;
+            const aspectA = afterImage.height / afterImage.width;
+            const frameAspect = Math.max(aspectB, aspectA);
+            const frameW = colWidth;
+            const frameH = Math.min(areaH - labelH, frameW * frameAspect);
+
+            // 垂直置中整個區塊（標籤 + 畫框）
+            const blockH = labelH + frameH;
+            const blockTop = areaTop + (areaH - blockH) / 2;
+            const labelY = blockTop + 22;
+            const imgTop = blockTop + labelH;
 
             // 標籤 - 治療前
             ctx.font = 'bold 22px -apple-system, "Microsoft JhengHei", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#1a5f4a';
-            ctx.fillText('圖一：治療前', 30 + photoWidth / 2, photoTop + 20);
+            ctx.fillText('圖一：治療前', 30 + colWidth / 2, labelY);
 
             // 標籤 - 治療後
             const timeText = getTimeText();
-            ctx.fillText(`圖二：治療後 ${timeText}`, 30 + photoWidth + gap + photoWidth / 2, photoTop + 20);
-
-            // 繪製照片
-            const imgTop = photoTop + 35;
-            const imgHeight = photoHeight - 35;
+            ctx.fillText(`圖二：治療後 ${timeText}`, 30 + colWidth + gap + colWidth / 2, labelY);
 
             // 治療前照片
-            drawImageZoomed(ctx, beforeImage, 30, imgTop, photoWidth, imgHeight, imageState.before);
+            drawImageZoomed(ctx, beforeImage, 30, imgTop, frameW, frameH, imageState.before);
 
             // 治療後照片
-            drawImageZoomed(ctx, afterImage, 30 + photoWidth + gap, imgTop, photoWidth, imgHeight, imageState.after);
+            drawImageZoomed(ctx, afterImage, 30 + colWidth + gap, imgTop, frameW, frameH, imageState.after);
 
             // 底部文字
             ctx.font = 'bold 20px -apple-system, "Microsoft JhengHei", sans-serif';
@@ -609,7 +620,8 @@
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(x, y, maxWidth, maxHeight);
 
-            const baseRatio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            // cover 模式：照片完全填滿畫框，避免上下或左右留白
+            const baseRatio = Math.max(maxWidth / img.width, maxHeight / img.height);
             const drawW = img.width * baseRatio * state.zoom;
             const drawH = img.height * baseRatio * state.zoom;
             const drawX = x + maxWidth / 2 - state.centerX * drawW;
