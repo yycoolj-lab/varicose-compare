@@ -403,8 +403,9 @@
             const canvas = document.createElement('canvas');
             canvas.id = type + 'Preview';
             canvas.className = 'preview-canvas';
-            canvas.width = 400;
-            canvas.height = 240;
+            const dims = getFrameDims();
+            canvas.width = dims.frameW;
+            canvas.height = dims.frameH;
             canvas.addEventListener('click', function(e) { e.stopPropagation(); });
             box.appendChild(canvas);
             if (input) box.appendChild(input);
@@ -438,10 +439,28 @@
             ctx.drawImage(img, drawX, drawY, drawW, drawH);
         }
 
+        // 確保 centerX/centerY 在合法範圍內，避免照片離開畫框露出白邊
+        function clampPan(type) {
+            const canvas = document.getElementById(type + 'Preview');
+            const img = type === 'before' ? beforeImage : afterImage;
+            if (!canvas || !img) return;
+            const state = imageState[type];
+            const baseRatio = Math.max(canvas.width / img.width, canvas.height / img.height);
+            const drawW = img.width * baseRatio * state.zoom;
+            const drawH = img.height * baseRatio * state.zoom;
+            const minCX = Math.min(0.5, canvas.width / (2 * drawW));
+            const maxCX = Math.max(0.5, 1 - canvas.width / (2 * drawW));
+            const minCY = Math.min(0.5, canvas.height / (2 * drawH));
+            const maxCY = Math.max(0.5, 1 - canvas.height / (2 * drawH));
+            state.centerX = Math.max(minCX, Math.min(maxCX, state.centerX));
+            state.centerY = Math.max(minCY, Math.min(maxCY, state.centerY));
+        }
+
         function zoomImage(type, delta) {
             const state = imageState[type];
             state.zoom = Math.max(1, Math.min(5, +(state.zoom + delta).toFixed(1)));
             if (state.zoom === 1) { state.centerX = 0.5; state.centerY = 0.5; }
+            else clampPan(type);
             document.getElementById(type + 'ZoomLabel').textContent = Math.round(state.zoom * 100) + '%';
             renderPreview(type);
         }
@@ -487,18 +506,9 @@
             const drawW = img.width * baseRatio * state.zoom;
             const drawH = img.height * baseRatio * state.zoom;
 
-            // 上下移動
-            state.centerY -= (dy * scaleY) / drawH;
-            const minCY = Math.min(0.5, canvas.height / (2 * drawH));
-            const maxCY = Math.max(0.5, 1 - canvas.height / (2 * drawH));
-            state.centerY = Math.max(minCY, Math.min(maxCY, state.centerY));
-
-            // 左右移動（將病灶位置置中）
             state.centerX -= (dx * scaleX) / drawW;
-            const minCX = Math.min(0.5, canvas.width / (2 * drawW));
-            const maxCX = Math.max(0.5, 1 - canvas.width / (2 * drawW));
-            state.centerX = Math.max(minCX, Math.min(maxCX, state.centerX));
-
+            state.centerY -= (dy * scaleY) / drawH;
+            clampPan(type);
             renderPreview(type);
         }
         
@@ -506,6 +516,43 @@
             const btn = document.getElementById('generateBtn');
             btn.disabled = !(beforeImage && afterImage);
         }
+
+        // 取得最終輸出的畫框尺寸（依目前選擇的比例）
+        function getFrameDims() {
+            const format = document.getElementById('formatSelect').value;
+            const isPortrait = (format !== 'landscape');
+            let W, H;
+            if (format === 'square') { W = 1080; H = 1080; }
+            else if (format === 'portrait') { W = 1080; H = 1350; }
+            else { W = 1050; H = 700; }
+            const areaTop = isPortrait ? 140 : 120;
+            const areaBottom = isPortrait ? H - 95 : H - 30;
+            const areaH = areaBottom - areaTop;
+            const labelH = isPortrait ? 40 : 35;
+            const frameW = (W - 80) / 2;
+            const frameAspectCap = 1.8;
+            const frameH = Math.min(areaH - labelH, frameW * frameAspectCap);
+            return { frameW, frameH };
+        }
+
+        // 切換比例時同步更新預覽 canvas 尺寸，並重新夾制拖曳範圍，避免出現白邊
+        function onFormatChange() {
+            const dims = getFrameDims();
+            ['before', 'after'].forEach(function(type) {
+                const canvas = document.getElementById(type + 'Preview');
+                const img = type === 'before' ? beforeImage : afterImage;
+                if (!canvas || !img) return;
+                canvas.width = dims.frameW;
+                canvas.height = dims.frameH;
+                clampPan(type);
+                renderPreview(type);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const sel = document.getElementById('formatSelect');
+            if (sel) sel.addEventListener('change', onFormatChange);
+        });
         
         function getTimeText() {
             const select = document.getElementById('timeSelect');
