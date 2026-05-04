@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>靜脈曲張對比圖製作 - 富足診所</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Cormorant+Garamond:wght@500;700&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -295,6 +298,21 @@
         <div class="options">
             <h3>⚙️ 設定</h3>
             <div class="option-row">
+                <label>樣式選擇</label>
+                <select id="styleSelect">
+                    <option value="style1" selected>樣式一（精緻成果展示）</option>
+                    <option value="style2">樣式二（案例追蹤表）</option>
+                </select>
+            </div>
+            <div class="option-row">
+                <label>圖片比例</label>
+                <select id="formatSelect">
+                    <option value="square" selected>1:1 正方形（IG 貼文）</option>
+                    <option value="portrait">4:5 直式（IG 貼文）</option>
+                    <option value="landscape">3:2 橫式（原始）</option>
+                </select>
+            </div>
+            <div class="option-row">
                 <label>治療後時間</label>
                 <select id="timeSelect">
                     <option value="一週">一週</option>
@@ -311,13 +329,23 @@
                 <label>自訂時間</label>
                 <input type="text" id="customTime" placeholder="例如：四個月">
             </div>
-            <div class="option-row">
-                <label>圖片比例</label>
-                <select id="formatSelect">
-                    <option value="square" selected>1:1 正方形（IG 貼文）</option>
-                    <option value="portrait">4:5 直式（IG 貼文）</option>
-                    <option value="landscape">3:2 橫式（原始）</option>
-                </select>
+            <div id="style2Fields" class="hidden">
+                <div class="option-row">
+                    <label>案例編號</label>
+                    <input type="text" id="caseNumber" placeholder="例如：VV-2026-001">
+                </div>
+                <div class="option-row">
+                    <label>治療部位</label>
+                    <input type="text" id="treatmentSite" placeholder="例如：左小腿">
+                </div>
+                <div class="option-row">
+                    <label>拍攝日期（前）</label>
+                    <input type="text" id="beforeDate" placeholder="例如：2025/04/22">
+                </div>
+                <div class="option-row">
+                    <label>拍攝日期（後）</label>
+                    <input type="text" id="afterDate" placeholder="例如：2026/04/22">
+                </div>
             </div>
         </div>
         
@@ -518,29 +546,80 @@
         }
 
         // 取得最終輸出的畫框尺寸（依目前選擇的比例）
-        function getFrameDims() {
-            const format = document.getElementById('formatSelect').value;
-            const isPortrait = (format !== 'landscape');
-            let W, H;
+        // ==========================================
+        // Layout & dimension calculation
+        // ==========================================
+        function getLayout() {
+            var format = document.getElementById('formatSelect').value;
+            var styleEl = document.getElementById('styleSelect');
+            var style = styleEl ? styleEl.value : 'style1';
+
+            var W, H;
             if (format === 'square') { W = 1080; H = 1080; }
             else if (format === 'portrait') { W = 1080; H = 1350; }
             else { W = 1050; H = 700; }
-            const areaTop = isPortrait ? 140 : 120;
-            const areaBottom = isPortrait ? H - 95 : H - 30;
-            const areaH = areaBottom - areaTop;
-            const labelH = isPortrait ? 40 : 35;
-            const frameW = (W - 80) / 2;
-            const frameAspectCap = 1.8;
-            const frameH = Math.min(areaH - labelH, frameW * frameAspectCap);
-            return { frameW, frameH };
+
+            var isPortrait = (format !== 'landscape');
+            var sidePad = isPortrait ? 42 : 32;
+            var gap = isPortrait ? 26 : 20;
+            var photoW = Math.floor((W - sidePad * 2 - gap) / 2);
+
+            // Vertical spacing
+            var titleFontSize = isPortrait ? 38 : 28;
+            var titleY = isPortrait ? 80 : 58;
+            var subFontSize = isPortrait ? 17 : 13;
+            var subY = titleY + (isPortrait ? 42 : 32);
+            var ovalCY = subY + (isPortrait ? 48 : 36);
+            var ovalH = isPortrait ? 36 : 28;
+            var ovalW = isPortrait ? 120 : 95;
+            var baY = ovalCY + ovalH / 2 + (isPortrait ? 20 : 16);
+            var photoTop = baY + (isPortrait ? 14 : 10);
+
+            // Bottom reserve (space for footer + fields)
+            var bottomReserve;
+            if (style === 'style2') {
+                bottomReserve = isPortrait ? 200 : 145;
+            } else {
+                bottomReserve = isPortrait ? 115 : 70;
+            }
+
+            var photoH = H - photoTop - bottomReserve;
+            // Cap aspect ratio so photos aren't too tall
+            var maxAspect = 1.42;
+            if (photoH > photoW * maxAspect) {
+                photoH = Math.floor(photoW * maxAspect);
+            }
+
+            // Recenter photo block vertically in available space
+            var availH = H - photoTop - bottomReserve;
+            var photoTopAdj = photoTop + Math.floor((availH - photoH) / 2);
+
+            return {
+                W: W, H: H, format: format, style: style,
+                isPortrait: isPortrait,
+                sidePad: sidePad, gap: gap,
+                photoW: photoW, photoH: photoH,
+                titleFontSize: titleFontSize, titleY: titleY,
+                subFontSize: subFontSize, subY: subY,
+                ovalCY: ovalCY, ovalH: ovalH, ovalW: ovalW,
+                baY: baY, photoTop: photoTopAdj,
+                bottomReserve: bottomReserve
+            };
         }
 
-        // 切換比例時同步更新預覽 canvas 尺寸，並重新夾制拖曳範圍，避免出現白邊
-        function onFormatChange() {
-            const dims = getFrameDims();
+        function getFrameDims() {
+            var L = getLayout();
+            return { frameW: L.photoW, frameH: L.photoH };
+        }
+
+        // ==========================================
+        // Event handlers
+        // ==========================================
+        function onFormatOrStyleChange() {
+            var dims = getFrameDims();
             ['before', 'after'].forEach(function(type) {
-                const canvas = document.getElementById(type + 'Preview');
-                const img = type === 'before' ? beforeImage : afterImage;
+                var canvas = document.getElementById(type + 'Preview');
+                var img = type === 'before' ? beforeImage : afterImage;
                 if (!canvas || !img) return;
                 canvas.width = dims.frameW;
                 canvas.height = dims.frameH;
@@ -549,160 +628,334 @@
             });
         }
 
+        function onStyleChange() {
+            var style = document.getElementById('styleSelect').value;
+            var fields = document.getElementById('style2Fields');
+            if (style === 'style2') {
+                fields.classList.remove('hidden');
+            } else {
+                fields.classList.add('hidden');
+            }
+            onFormatOrStyleChange();
+        }
+
+        function onTimeChange() {
+            var sel = document.getElementById('timeSelect');
+            var row = document.getElementById('customTimeRow');
+            if (sel.value === 'custom') {
+                row.classList.remove('hidden');
+            } else {
+                row.classList.add('hidden');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            const sel = document.getElementById('formatSelect');
-            if (sel) sel.addEventListener('change', onFormatChange);
+            var formatSel = document.getElementById('formatSelect');
+            if (formatSel) formatSel.addEventListener('change', onFormatOrStyleChange);
+
+            var styleSel = document.getElementById('styleSelect');
+            if (styleSel) styleSel.addEventListener('change', onStyleChange);
+
+            var timeSel = document.getElementById('timeSelect');
+            if (timeSel) timeSel.addEventListener('change', onTimeChange);
         });
-        
+
         function getTimeText() {
-            const select = document.getElementById('timeSelect');
+            var select = document.getElementById('timeSelect');
             if (select.value === 'custom') {
                 return document.getElementById('customTime').value || '三個月';
             }
             return select.value;
         }
-        
+
+        // ==========================================
+        // Drawing helper functions
+        // ==========================================
+
+        function drawRoundedRectPath(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+        }
+
+        function drawCornerAccents(ctx, W, H) {
+            var size = Math.min(W, H) * 0.08;
+            ctx.fillStyle = '#1a5f4a';
+
+            // Bottom-left triangle
+            ctx.beginPath();
+            ctx.moveTo(0, H);
+            ctx.lineTo(size * 1.2, H);
+            ctx.lineTo(0, H - size * 1.2);
+            ctx.closePath();
+            ctx.fill();
+
+            // Bottom-right triangle
+            ctx.beginPath();
+            ctx.moveTo(W, H);
+            ctx.lineTo(W - size * 1.2, H);
+            ctx.lineTo(W, H - size * 1.2);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawOvalLabel(ctx, text, cx, cy, ovalW, ovalH) {
+            ctx.save();
+            ctx.fillStyle = '#1a5f4a';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, ovalW / 2, ovalH / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold ' + Math.round(ovalH * 0.44) + 'px "Noto Serif TC", serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, cx, cy + 1);
+            ctx.restore();
+        }
+
+        function drawImageRounded(ctx, img, x, y, w, h, r, state) {
+            ctx.save();
+            drawRoundedRectPath(ctx, x, y, w, h, r);
+            ctx.clip();
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(x, y, w, h);
+
+            // Cover mode: fill frame completely, crop overflow
+            var baseRatio = Math.max(w / img.width, h / img.height);
+            var drawW = img.width * baseRatio * state.zoom;
+            var drawH = img.height * baseRatio * state.zoom;
+            var drawX = x + w / 2 - state.centerX * drawW;
+            var drawY = y + h / 2 - state.centerY * drawH;
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+            ctx.restore();
+
+            // Rounded border
+            ctx.strokeStyle = '#1a5f4a';
+            ctx.lineWidth = 2.5;
+            drawRoundedRectPath(ctx, x, y, w, h, r);
+            ctx.stroke();
+        }
+
+        // ==========================================
+        // Main image generation
+        // ==========================================
         function generateImage() {
-            const canvas = document.getElementById('previewCanvas');
-            const ctx = canvas.getContext('2d');
+            var canvas = document.getElementById('previewCanvas');
+            var ctx = canvas.getContext('2d');
+            var L = getLayout();
+            var W = L.W, H = L.H;
 
-            // 依使用者選擇決定畫布尺寸
-            const format = document.getElementById('formatSelect').value;
-            let W, H;
-            if (format === 'square') {
-                W = 1080; H = 1080;      // IG 正方形
-            } else if (format === 'portrait') {
-                W = 1080; H = 1350;      // IG 4:5 直式
-            } else {
-                W = 1050; H = 700;       // 原始橫式
-            }
-
-            // 設定畫布尺寸 (2x 解析度，顯示時用 CSS 縮放)
-            const scale = 2;
+            // 2x resolution for retina
+            var scale = 2;
             canvas.width = W * scale;
             canvas.height = H * scale;
             canvas.style.aspectRatio = W + ' / ' + H;
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.scale(scale, scale);
 
-            // 背景色 - 淺米色
+            // ── Background ──
             ctx.fillStyle = '#FAF9F6';
             ctx.fillRect(0, 0, W, H);
 
-            // 深綠色外框
-            const borderWidth = 4;
-            const margin = 10;
+            // ── Corner accents (behind border) ──
+            drawCornerAccents(ctx, W, H);
+
+            // ── Border ──
+            var borderM = 12;
             ctx.strokeStyle = '#1a5f4a';
-            ctx.lineWidth = borderWidth;
-            ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
+            ctx.lineWidth = 3;
+            ctx.strokeRect(borderM, borderM, W - borderM * 2, H - borderM * 2);
 
-            // 依畫布比例設定邊距（portrait 需要更大呼吸空間）
-            const isPortrait = (format !== 'landscape');
-            const titleY = isPortrait ? 100 : 75;
-            const titleFont = isPortrait ? 'bold 36px' : 'bold 32px';
-            const logoTopY = isPortrait ? 28 : 15;
-            const logoLabelOffset = isPortrait ? 78 : 70; // Logo 下方「富足診所」與 logoTopY 的距離
-            const bottomTextY = isPortrait ? H - 50 : H - 35;
-            const bottomFont = isPortrait ? 'bold 22px' : 'bold 20px';
-            const areaTop = isPortrait ? 140 : 120;
-            const areaBottom = isPortrait ? H - 95 : H - 30;
-
-            // 標題
-            ctx.fillStyle = '#1a5f4a';
-            ctx.font = titleFont + ' -apple-system, "Microsoft JhengHei", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('靜脈曲張患者治療對比圖', W / 2, titleY);
-
-            // Logo (右上角)
+            // ── Logo (top right) ──
+            var logoSize = L.isPortrait ? 50 : 42;
             if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
-                const logoHeight = 60;
-                const logoRatio = logoImage.naturalWidth / logoImage.naturalHeight;
-                const logoWidth = logoHeight * logoRatio;
-                ctx.drawImage(logoImage, W - logoWidth - 25, logoTopY, logoWidth, logoHeight);
-                ctx.font = '12px -apple-system, "Microsoft JhengHei", sans-serif';
+                var logoRatio = logoImage.naturalWidth / logoImage.naturalHeight;
+                var logoW = logoSize * logoRatio;
+                var logoX = W - logoW - 28;
+                var logoY = 22;
+                ctx.drawImage(logoImage, logoX, logoY, logoW, logoSize);
+                ctx.font = '11px "Noto Serif TC", sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillStyle = '#1a5f4a';
-                ctx.fillText('富足診所', W - logoWidth/2 - 25, logoTopY + logoLabelOffset);
-            } else {
-                // 如果 Logo 沒載入，用文字代替
-                ctx.font = 'bold 16px -apple-system, "Microsoft JhengHei", sans-serif';
-                ctx.textAlign = 'right';
-                ctx.fillStyle = '#1a5f4a';
-                ctx.fillText('富足診所', W - 30, logoTopY + 35);
+                ctx.fillText('富足診所', logoX + logoW / 2, logoY + logoSize + 15);
             }
 
-            // 照片區域計算
-            const areaH = areaBottom - areaTop;
-            const colWidth = (W - 80) / 2;
-            const gap = 20;
-            const labelH = isPortrait ? 40 : 35;
+            // ── Title ──
+            ctx.fillStyle = '#1a5f4a';
+            ctx.font = 'bold ' + L.titleFontSize + 'px "Noto Serif TC", serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText('靜脈曲張治療前後對比', W / 2, L.titleY);
 
-            // 畫框尺寸：填滿可用空間，aspect 上限 1.8（避免過度裁切）
-            const frameAspectCap = 1.8;
-            const frameW = colWidth;
-            const frameH = Math.min(areaH - labelH, frameW * frameAspectCap);
+            // ── Subtitle ──
+            if (L.style === 'style1') {
+                // ── 治療成果追蹤示意 with gold decorative lines ──
+                var subText = '治療成果追蹤示意';
+                ctx.font = L.subFontSize + 'px "Noto Serif TC", serif';
+                var tw = ctx.measureText(subText).width;
+                var lineLen = L.isPortrait ? 70 : 50;
+                var dGap = 10;
+                var dSize = 5;
 
-            // 垂直置中整個區塊（標籤 + 畫框）
-            const blockH = labelH + frameH;
-            const blockTop = areaTop + (areaH - blockH) / 2;
-            const labelY = blockTop + 22;
-            const imgTop = blockTop + labelH;
+                // Compute positions
+                var centerX = W / 2;
+                var sy = L.subY;
 
-            // 標籤 - 治療前
-            ctx.font = 'bold 22px -apple-system, "Microsoft JhengHei", sans-serif';
+                // Text
+                ctx.fillStyle = '#777';
+                ctx.textAlign = 'center';
+                ctx.fillText(subText, centerX, sy);
+
+                // Left diamond
+                var ldx = centerX - tw / 2 - dGap - dSize;
+                ctx.fillStyle = '#C9A84C';
+                ctx.beginPath();
+                ctx.moveTo(ldx, sy - 6 - dSize);
+                ctx.lineTo(ldx + dSize, sy - 6);
+                ctx.lineTo(ldx, sy - 6 + dSize);
+                ctx.lineTo(ldx - dSize, sy - 6);
+                ctx.closePath();
+                ctx.fill();
+
+                // Left line
+                ctx.strokeStyle = '#C9A84C';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(ldx - dSize - 5, sy - 6);
+                ctx.lineTo(ldx - dSize - 5 - lineLen, sy - 6);
+                ctx.stroke();
+
+                // Right diamond
+                var rdx = centerX + tw / 2 + dGap + dSize;
+                ctx.fillStyle = '#C9A84C';
+                ctx.beginPath();
+                ctx.moveTo(rdx, sy - 6 - dSize);
+                ctx.lineTo(rdx + dSize, sy - 6);
+                ctx.lineTo(rdx, sy - 6 + dSize);
+                ctx.lineTo(rdx - dSize, sy - 6);
+                ctx.closePath();
+                ctx.fill();
+
+                // Right line
+                ctx.strokeStyle = '#C9A84C';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(rdx + dSize + 5, sy - 6);
+                ctx.lineTo(rdx + dSize + 5 + lineLen, sy - 6);
+                ctx.stroke();
+            } else {
+                // ── Style 2: ◆ 案例追蹤示意 ◆ ──
+                ctx.fillStyle = '#777';
+                ctx.font = L.subFontSize + 'px "Noto Serif TC", serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('◆  案例追蹤示意  ◆', W / 2, L.subY);
+            }
+
+            // ── Oval labels (clinic logo shape) ──
+            var leftCX = L.sidePad + L.photoW / 2;
+            var rightCX = L.sidePad + L.photoW + L.gap + L.photoW / 2;
+            var timeText = getTimeText();
+
+            drawOvalLabel(ctx, '治療前 ·', leftCX, L.ovalCY, L.ovalW, L.ovalH);
+            if (L.style === 'style1') {
+                var afterLabel = '治療後' + timeText;
+                // Measure text to auto-size the oval
+                ctx.font = 'bold ' + Math.round(L.ovalH * 0.44) + 'px "Noto Serif TC", serif';
+                var afterTW = ctx.measureText(afterLabel).width;
+                var afterOvalW = Math.max(L.ovalW, afterTW + 36);
+                drawOvalLabel(ctx, afterLabel, rightCX, L.ovalCY, afterOvalW, L.ovalH);
+            } else {
+                drawOvalLabel(ctx, '治療後 ·', rightCX, L.ovalCY, L.ovalW, L.ovalH);
+            }
+
+            // ── BEFORE / AFTER outlined text ──
+            var baFontSize = L.isPortrait ? 14 : 11;
+            ctx.font = baFontSize + 'px "Cormorant Garamond", serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+            ctx.strokeStyle = '#1a5f4a';
+            ctx.lineWidth = 0.6;
+            ctx.strokeText('BEFORE', leftCX, L.baY);
+            ctx.strokeText('AFTER', rightCX, L.baY);
+
+            // ── Photo frames (rounded corners) ──
+            var cornerR = L.isPortrait ? 16 : 12;
+            drawImageRounded(ctx, beforeImage, L.sidePad, L.photoTop, L.photoW, L.photoH, cornerR, imageState.before);
+            drawImageRounded(ctx, afterImage, L.sidePad + L.photoW + L.gap, L.photoTop, L.photoW, L.photoH, cornerR, imageState.after);
+
+            // ── Style 2 specific: date fields, case info ──
+            if (L.style === 'style2') {
+                var fSize = L.isPortrait ? 14 : 11;
+                var fY1 = L.photoTop + L.photoH + (L.isPortrait ? 22 : 15);
+
+                var beforeDate = document.getElementById('beforeDate') ? document.getElementById('beforeDate').value : '';
+                var afterDate = document.getElementById('afterDate') ? document.getElementById('afterDate').value : '';
+
+                ctx.font = fSize + 'px "Noto Serif TC", sans-serif';
+                ctx.fillStyle = '#555';
+                ctx.textAlign = 'left';
+
+                ctx.fillText('拍攝日期：' + beforeDate, L.sidePad, fY1);
+                ctx.fillText('拍攝日期：' + afterDate, L.sidePad + L.photoW + L.gap, fY1);
+
+                var fY2 = fY1 + (L.isPortrait ? 22 : 16);
+                ctx.fillText('追蹤時間：' + timeText, L.sidePad + L.photoW + L.gap, fY2);
+
+                // Separator line
+                var fY3 = fY2 + (L.isPortrait ? 28 : 20);
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(L.sidePad, fY3 - 10);
+                ctx.lineTo(W - L.sidePad, fY3 - 10);
+                ctx.stroke();
+
+                var caseNum = document.getElementById('caseNumber') ? document.getElementById('caseNumber').value : '';
+                var treatSite = document.getElementById('treatmentSite') ? document.getElementById('treatmentSite').value : '';
+
+                ctx.fillStyle = '#555';
+                ctx.font = fSize + 'px "Noto Serif TC", sans-serif';
+                ctx.fillText('📋 案例編號：' + caseNum, L.sidePad, fY3 + 4);
+                ctx.fillText('治療部位：' + treatSite, L.sidePad + L.photoW + L.gap, fY3 + 4);
+            }
+
+            // ── Footer ──
+            var footerY = H - (L.isPortrait ? 52 : 34);
+            ctx.font = 'bold ' + (L.isPortrait ? 18 : 15) + 'px "Noto Serif TC", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#1a5f4a';
-            ctx.fillText('圖一：治療前', 30 + colWidth / 2, labelY);
+            ctx.fillText('富足診所｜靜脈曲張微創處理專家', W / 2, footerY);
 
-            // 標籤 - 治療後
-            const timeText = getTimeText();
-            ctx.fillText(`圖二：治療後 ${timeText}`, 30 + colWidth + gap + colWidth / 2, labelY);
+            // ── Disclaimer ──
+            var discY = footerY + (L.isPortrait ? 20 : 15);
+            ctx.font = (L.isPortrait ? 11 : 9) + 'px "Noto Serif TC", sans-serif';
+            ctx.fillStyle = '#aaa';
+            ctx.fillText('實際治療效果因個人狀況而異', W / 2, discY);
 
-            // 治療前照片
-            drawImageZoomed(ctx, beforeImage, 30, imgTop, frameW, frameH, imageState.before);
-
-            // 治療後照片
-            drawImageZoomed(ctx, afterImage, 30 + colWidth + gap, imgTop, frameW, frameH, imageState.after);
-
-            // 底部文字
-            ctx.font = bottomFont + ' -apple-system, "Microsoft JhengHei", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#1a5f4a';
-            ctx.fillText('靜脈曲張微創處理專家', W / 2, bottomTextY);
-
-            // 顯示預覽
+            // Show preview
             document.getElementById('previewSection').classList.remove('hidden');
             document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
         }
-        
-        function drawImageZoomed(ctx, img, x, y, maxWidth, maxHeight, state) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(x, y, maxWidth, maxHeight);
-            ctx.clip();
 
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(x, y, maxWidth, maxHeight);
-
-            // cover 模式：照片完全填滿畫框，避免上下或左右留白
-            const baseRatio = Math.max(maxWidth / img.width, maxHeight / img.height);
-            const drawW = img.width * baseRatio * state.zoom;
-            const drawH = img.height * baseRatio * state.zoom;
-            const drawX = x + maxWidth / 2 - state.centerX * drawW;
-            const drawY = y + maxHeight / 2 - state.centerY * drawH;
-            ctx.drawImage(img, drawX, drawY, drawW, drawH);
-
-            ctx.restore();
-            ctx.strokeStyle = '#1a5f4a';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, maxWidth, maxHeight);
-        }
-        
+        // ==========================================
+        // Download
+        // ==========================================
         function downloadImage() {
-            const canvas = document.getElementById('previewCanvas');
-            const filename = `compare_${new Date().toISOString().slice(0,10)}.jpg`;
-            const maxSize = 4 * 1024 * 1024; // 4MB
-            let quality = 0.92;
+            var canvas = document.getElementById('previewCanvas');
+            var filename = 'compare_' + new Date().toISOString().slice(0, 10) + '.jpg';
+            var maxSize = 4 * 1024 * 1024;
+            var quality = 0.92;
 
             function tryDownload() {
                 canvas.toBlob(function(blob) {
@@ -711,8 +964,8 @@
                         tryDownload();
                         return;
                     }
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
+                    var url = URL.createObjectURL(blob);
+                    var link = document.createElement('a');
                     link.download = filename;
                     link.href = url;
                     document.body.appendChild(link);
