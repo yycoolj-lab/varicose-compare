@@ -575,12 +575,12 @@
             var baY = ovalCY + ovalH / 2 + (isPortrait ? 18 : 14);
             var photoTop = baY + (isPortrait ? 12 : 8);
 
-            // Bottom reserve (space for gold line + footer + fields)
+            // Bottom reserve (space for footer + fields)
             var bottomReserve;
             if (style === 'style2') {
                 bottomReserve = isPortrait ? 200 : 145;
             } else {
-                bottomReserve = isPortrait ? 135 : 82;
+                bottomReserve = isPortrait ? 115 : 70;
             }
 
             var photoH = H - photoTop - bottomReserve;
@@ -774,10 +774,10 @@
             // ── Corner accents (behind border) ──
             drawCornerAccents(ctx, W, H);
 
-            // ── Gold border ──
+            // ── Border ──
             var borderM = 12;
-            ctx.strokeStyle = '#C9A84C';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#1a5f4a';
+            ctx.lineWidth = 3;
             ctx.strokeRect(borderM, borderM, W - borderM * 2, H - borderM * 2);
 
             // ── Logo (top right) — icon + text side by side ──
@@ -909,17 +909,6 @@
                 ctx.font = fSize + 'px "Noto Serif TC", sans-serif';
                 ctx.fillText('📋 案例編號：' + caseNum, L.sidePad, fY3 + 4);
                 ctx.fillText('治療部位：' + treatSite, L.sidePad + L.photoW + L.gap, fY3 + 4);
-            }
-
-            // ── Gold separator line (style 1) ──
-            if (L.style === 'style1') {
-                var goldLineY = L.photoTop + L.photoH + (L.isPortrait ? 28 : 18);
-                ctx.strokeStyle = '#C9A84C';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(L.sidePad, goldLineY);
-                ctx.lineTo(W - L.sidePad, goldLineY);
-                ctx.stroke();
             }
 
             // ── Footer ──
