@@ -565,22 +565,22 @@
             var photoW = Math.floor((W - sidePad * 2 - gap) / 2);
 
             // Vertical spacing
-            var titleFontSize = isPortrait ? 38 : 28;
-            var titleY = isPortrait ? 80 : 58;
-            var subFontSize = isPortrait ? 17 : 13;
-            var subY = titleY + (isPortrait ? 42 : 32);
-            var ovalCY = subY + (isPortrait ? 48 : 36);
-            var ovalH = isPortrait ? 36 : 28;
-            var ovalW = isPortrait ? 120 : 95;
-            var baY = ovalCY + ovalH / 2 + (isPortrait ? 20 : 16);
-            var photoTop = baY + (isPortrait ? 14 : 10);
+            var titleFontSize = isPortrait ? 46 : 30;
+            var titleY = isPortrait ? 82 : 58;
+            var subFontSize = isPortrait ? 16 : 12;
+            var subY = titleY + (isPortrait ? 36 : 26);
+            var ovalCY = subY + (isPortrait ? 40 : 30);
+            var ovalH = isPortrait ? 34 : 26;
+            var ovalW = isPortrait ? 110 : 88;
+            var baY = ovalCY + ovalH / 2 + (isPortrait ? 18 : 14);
+            var photoTop = baY + (isPortrait ? 12 : 8);
 
-            // Bottom reserve (space for footer + fields)
+            // Bottom reserve (space for gold line + footer + fields)
             var bottomReserve;
             if (style === 'style2') {
                 bottomReserve = isPortrait ? 200 : 145;
             } else {
-                bottomReserve = isPortrait ? 115 : 70;
+                bottomReserve = isPortrait ? 135 : 82;
             }
 
             var photoH = H - photoTop - bottomReserve;
@@ -709,13 +709,16 @@
 
         function drawOvalLabel(ctx, text, cx, cy, ovalW, ovalH) {
             ctx.save();
+            // Capsule / rounded-rectangle shape (like clinic logo)
+            var r = ovalH / 2;
+            var x = cx - ovalW / 2;
+            var y = cy - ovalH / 2;
             ctx.fillStyle = '#1a5f4a';
-            ctx.beginPath();
-            ctx.ellipse(cx, cy, ovalW / 2, ovalH / 2, 0, 0, Math.PI * 2);
+            drawRoundedRectPath(ctx, x, y, ovalW, ovalH, r);
             ctx.fill();
 
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold ' + Math.round(ovalH * 0.44) + 'px "Noto Serif TC", serif';
+            ctx.font = 'bold ' + Math.round(ovalH * 0.46) + 'px "Noto Serif TC", serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(text, cx, cy + 1);
@@ -740,9 +743,9 @@
 
             ctx.restore();
 
-            // Rounded border
-            ctx.strokeStyle = '#1a5f4a';
-            ctx.lineWidth = 2.5;
+            // Rounded border (gold to match frame)
+            ctx.strokeStyle = '#C9A84C';
+            ctx.lineWidth = 2;
             drawRoundedRectPath(ctx, x, y, w, h, r);
             ctx.stroke();
         }
@@ -771,88 +774,66 @@
             // ── Corner accents (behind border) ──
             drawCornerAccents(ctx, W, H);
 
-            // ── Border ──
+            // ── Gold border ──
             var borderM = 12;
-            ctx.strokeStyle = '#1a5f4a';
-            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#C9A84C';
+            ctx.lineWidth = 2;
             ctx.strokeRect(borderM, borderM, W - borderM * 2, H - borderM * 2);
 
-            // ── Logo (top right) ──
-            var logoSize = L.isPortrait ? 50 : 42;
+            // ── Logo (top right) — icon + text side by side ──
+            var logoSize = L.isPortrait ? 52 : 42;
             if (logoImage && logoImage.complete && logoImage.naturalWidth > 0) {
                 var logoRatio = logoImage.naturalWidth / logoImage.naturalHeight;
                 var logoW = logoSize * logoRatio;
-                var logoX = W - logoW - 28;
-                var logoY = 22;
+                // Text to the right of logo
+                ctx.font = '500 ' + (L.isPortrait ? 14 : 11) + 'px "Noto Serif TC", serif';
+                var clinicText = '富足診所';
+                var ctw = ctx.measureText(clinicText).width;
+                var logoBlockW = logoW + 6 + ctw;
+                var logoX = W - logoBlockW - 22;
+                var logoY = 20;
                 ctx.drawImage(logoImage, logoX, logoY, logoW, logoSize);
-                ctx.font = '11px "Noto Serif TC", sans-serif';
-                ctx.textAlign = 'center';
                 ctx.fillStyle = '#1a5f4a';
-                ctx.fillText('富足診所', logoX + logoW / 2, logoY + logoSize + 15);
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(clinicText, logoX + logoW + 6, logoY + logoSize / 2 + 1);
+                ctx.textBaseline = 'alphabetic';
             }
 
             // ── Title ──
             ctx.fillStyle = '#1a5f4a';
-            ctx.font = 'bold ' + L.titleFontSize + 'px "Noto Serif TC", serif';
+            ctx.font = '900 ' + L.titleFontSize + 'px "Noto Serif TC", serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'alphabetic';
             ctx.fillText('靜脈曲張治療前後對比', W / 2, L.titleY);
 
             // ── Subtitle ──
             if (L.style === 'style1') {
-                // ── 治療成果追蹤示意 with gold decorative lines ──
+                // ── 治療成果追蹤示意 with gold lines on both sides ──
                 var subText = '治療成果追蹤示意';
                 ctx.font = L.subFontSize + 'px "Noto Serif TC", serif';
                 var tw = ctx.measureText(subText).width;
-                var lineLen = L.isPortrait ? 70 : 50;
-                var dGap = 10;
-                var dSize = 5;
-
-                // Compute positions
-                var centerX = W / 2;
+                var lineLen = L.isPortrait ? 100 : 70;
+                var lineGap = L.isPortrait ? 12 : 8;
                 var sy = L.subY;
 
                 // Text
                 ctx.fillStyle = '#777';
                 ctx.textAlign = 'center';
-                ctx.fillText(subText, centerX, sy);
+                ctx.fillText(subText, W / 2, sy);
 
-                // Left diamond
-                var ldx = centerX - tw / 2 - dGap - dSize;
-                ctx.fillStyle = '#C9A84C';
-                ctx.beginPath();
-                ctx.moveTo(ldx, sy - 6 - dSize);
-                ctx.lineTo(ldx + dSize, sy - 6);
-                ctx.lineTo(ldx, sy - 6 + dSize);
-                ctx.lineTo(ldx - dSize, sy - 6);
-                ctx.closePath();
-                ctx.fill();
-
-                // Left line
+                // Left gold line
                 ctx.strokeStyle = '#C9A84C';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(ldx - dSize - 5, sy - 6);
-                ctx.lineTo(ldx - dSize - 5 - lineLen, sy - 6);
+                ctx.moveTo(W / 2 - tw / 2 - lineGap, sy - 5);
+                ctx.lineTo(W / 2 - tw / 2 - lineGap - lineLen, sy - 5);
                 ctx.stroke();
 
-                // Right diamond
-                var rdx = centerX + tw / 2 + dGap + dSize;
-                ctx.fillStyle = '#C9A84C';
+                // Right gold line
                 ctx.beginPath();
-                ctx.moveTo(rdx, sy - 6 - dSize);
-                ctx.lineTo(rdx + dSize, sy - 6);
-                ctx.lineTo(rdx, sy - 6 + dSize);
-                ctx.lineTo(rdx - dSize, sy - 6);
-                ctx.closePath();
-                ctx.fill();
-
-                // Right line
-                ctx.strokeStyle = '#C9A84C';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(rdx + dSize + 5, sy - 6);
-                ctx.lineTo(rdx + dSize + 5 + lineLen, sy - 6);
+                ctx.moveTo(W / 2 + tw / 2 + lineGap, sy - 5);
+                ctx.lineTo(W / 2 + tw / 2 + lineGap + lineLen, sy - 5);
                 ctx.stroke();
             } else {
                 // ── Style 2: ◆ 案例追蹤示意 ◆ ──
@@ -880,17 +861,17 @@
             }
 
             // ── BEFORE / AFTER outlined text ──
-            var baFontSize = L.isPortrait ? 14 : 11;
-            ctx.font = baFontSize + 'px "Cormorant Garamond", serif';
+            var baFontSize = L.isPortrait ? 15 : 12;
+            ctx.font = '500 ' + baFontSize + 'px "Cormorant Garamond", serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'alphabetic';
             ctx.strokeStyle = '#1a5f4a';
-            ctx.lineWidth = 0.6;
+            ctx.lineWidth = 0.7;
             ctx.strokeText('BEFORE', leftCX, L.baY);
             ctx.strokeText('AFTER', rightCX, L.baY);
 
             // ── Photo frames (rounded corners) ──
-            var cornerR = L.isPortrait ? 16 : 12;
+            var cornerR = L.isPortrait ? 22 : 14;
             drawImageRounded(ctx, beforeImage, L.sidePad, L.photoTop, L.photoW, L.photoH, cornerR, imageState.before);
             drawImageRounded(ctx, afterImage, L.sidePad + L.photoW + L.gap, L.photoTop, L.photoW, L.photoH, cornerR, imageState.after);
 
@@ -930,18 +911,29 @@
                 ctx.fillText('治療部位：' + treatSite, L.sidePad + L.photoW + L.gap, fY3 + 4);
             }
 
+            // ── Gold separator line (style 1) ──
+            if (L.style === 'style1') {
+                var goldLineY = L.photoTop + L.photoH + (L.isPortrait ? 28 : 18);
+                ctx.strokeStyle = '#C9A84C';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(L.sidePad, goldLineY);
+                ctx.lineTo(W - L.sidePad, goldLineY);
+                ctx.stroke();
+            }
+
             // ── Footer ──
-            var footerY = H - (L.isPortrait ? 52 : 34);
-            ctx.font = 'bold ' + (L.isPortrait ? 18 : 15) + 'px "Noto Serif TC", sans-serif';
+            var footerY = H - (L.isPortrait ? 58 : 36);
+            ctx.font = (L.isPortrait ? 22 : 16) + 'px "Noto Serif TC", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#1a5f4a';
             ctx.fillText('富足診所｜靜脈曲張微創處理專家', W / 2, footerY);
 
             // ── Disclaimer ──
-            var discY = footerY + (L.isPortrait ? 20 : 15);
-            ctx.font = (L.isPortrait ? 11 : 9) + 'px "Noto Serif TC", sans-serif';
+            var discY = footerY + (L.isPortrait ? 24 : 16);
+            ctx.font = (L.isPortrait ? 12 : 9) + 'px "Noto Serif TC", sans-serif';
             ctx.fillStyle = '#aaa';
-            ctx.fillText('實際治療效果因個人狀況而異', W / 2, discY);
+            ctx.fillText('實際治療效果依個人狀況而異', W / 2, discY);
 
             // Show preview
             document.getElementById('previewSection').classList.remove('hidden');
